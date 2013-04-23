@@ -3,7 +3,7 @@ if (!defined('SharpPHP')) { exit(); }
 
 /**
  * SharpPHP Controller class
- * @author dotcoo zhao
+ * @author dotcoo zhao <dotcoo@gmail.com>
  * @link https://github.org/dotcoo/sharpphp
  */
 class Controller {
@@ -15,7 +15,7 @@ class Controller {
 	 * @param View $view
 	 */
 	public function notFoundAction($view) {
-		$view->message('not found Action');
+		$view->message('not found '.ACTION.' Action!');
 	}
 	
 	/**

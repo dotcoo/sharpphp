@@ -31,10 +31,10 @@ class SharpPHP {
 		spl_autoload_register(array($this, 'autoload'));
 		
 		// 获得请求的Controller和Action
-		define('CONTROLLER', ucfirst(isset($_GET['c']) ? $_GET['c'] : 'index'));
-		define('ACTION', isset($_GET['a']) ? $_GET['a'] : 'index');
-		$this->controller_name = CONTROLLER.'Controller';
-		$this->action_name = ACTION.'Action';
+		define('APP_CONTROLLER', ucfirst(isset($_GET['c']) ? $_GET['c'] : 'Index'));
+		define('APP_ACTION', isset($_GET['a']) ? $_GET['a'] : 'Index');
+		$this->controller_name = APP_MODULE.APP_CONTROLLER.'Controller';
+		$this->action_name = APP_ACTION.'Action';
 		
 		// 连接数据库
 		$pdo = $this->createPdo($config);
@@ -60,6 +60,7 @@ class SharpPHP {
 		$default = array(
 				// 项目
 				'app_path' => $_SERVER['DOCUMENT_ROOT'].'/App', // 项目路率
+				'app_module' => 'Home', // 默认模块
 		
 				// 数据库
 				'db_host' => '127.0.0.1', // 数据库地址
@@ -83,6 +84,7 @@ class SharpPHP {
 		$config = array_merge($default, $config);
 		
 		define('APP_PATH', $config['app_path']);
+		define('APP_MODULE', $config['app_module']);
 		
 		return $config;
 	}
@@ -111,7 +113,7 @@ class SharpPHP {
 		}
 		// 控制器
 		if (substr($class_name, -10) == 'Controller') {
-			include APP_PATH.'/Controller/'.$class_name.'.class.php';
+			include APP_PATH.'/Controller/'.APP_MODULE.'/'.$class_name.'.class.php';
 			return;
 		}
 	}
@@ -127,7 +129,7 @@ class SharpPHP {
 	}
 	
 	public function createView(&$config) {
-		$this->view = new View(APP_PATH.'/view/', APP_PATH.'/data/view/', CONTROLLER.'/'.ACTION);
+		$this->view = new View(APP_PATH.'/View/'.APP_MODULE, APP_PATH.'/Data/View/'.APP_MODULE, APP_CONTROLLER.'/'.APP_ACTION);
 		$this->view->extension = $config['view_extension'];
 		$this->view->check = $config['view_check'];
 		$this->view->charset = $config['view_charset'];
@@ -138,7 +140,7 @@ class SharpPHP {
 	
 	public function createColltroller(&$config) {
 		if (!class_exists($this->controller_name)) {
-			if (!class_exists('EmptyController')) {
+			if (!class_exists(APP_MODULE.'EmptyController')) {
 				throw new Exception("SharpPHP: class {$this->controller_name} not found!");
 			}
 			$this->controller_name = 'EmptyController';

@@ -1,8 +1,8 @@
-{include header}
+{include common/header}
 <table class="list">
 <tr><th>用户id</th><th>用户名</th><th>密码</th></tr>
 {loop $users $uid $u}
 <tr><td>{$uid}</td><td>{$u['username']}</td><td>{$u['password']}</td></tr>
 {/loop}   
 </table>
-{include footer}
+{include common/footer}

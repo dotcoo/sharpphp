@@ -4,7 +4,8 @@ define('SharpPHP', 'v0.1');
 // 配置信息
 $config = array(
 		// 项目
-		'app_path' => __DIR__.'/examples',
+		'app_path'   => __DIR__.'/examples',
+		'app_module' => 'Home',
 		
 		// 数据库
 		'db_host' => '127.0.0.1',

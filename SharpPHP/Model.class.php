@@ -9,6 +9,8 @@ if (!defined('SharpPHP')) { exit(); }
 class Model {
 	public static $global_pdo;		// 全局pdo对象
 	public static $global_prefix;	// 全局表前缀
+	public static $global_pk;		// 全局表主键
+	public static $global_pagesize;	// 全局分页打消
 	
 	public $pdo;					// 私有pdo对象
 	public $table_name;				// 表名
@@ -31,7 +33,8 @@ class Model {
 		$this->table_name = $table_name;
 		$this->prefix = is_null($prefix) ? self::$global_prefix : $prefix;
 		$this->full_table_name = $this->prefix . $this->table_name;
-		$this->pk = $pk;
+		$this->pk = is_null($pk) ? self::$global_pk : $pk;
+		$this->pagesize = self::$global_pagesize;
 		$this->pdo = is_null($pdo) ? self::$global_pdo : $pdo;
 	}
 	
@@ -194,7 +197,7 @@ class Model {
 	 * 释放结果集
 	 * @return Model
 	 */
-	public function free_result() {
+	public function freeResult() {
 		if ($this->result instanceof PDOStatement) {
 			$this->result->closeCursor();
 		}
@@ -206,7 +209,7 @@ class Model {
 	 * 获得自增id的指
 	 * @return number
 	 */
-	public function insert_id() {
+	public function insertId() {
 		return $this->pdo->lastInsertId();
 	}
 	
@@ -254,7 +257,7 @@ class Model {
 		$cols = implode(', ', $cols);
 		$vals = implode(', ', $vals);
 		$this->sql = "INSERT INTO `{$this->full_table_name}` ($cols) VALUES($vals)";
-		return $this->execute()->insert_id();
+		return $this->execute()->insertId();
 	}
 	
 	/**
@@ -317,7 +320,7 @@ class Model {
 	 * @param string $col
 	 * @return array
 	 */
-	public function fetch_all($col = null) {
+	public function fetchAll($col = null) {
 		if($this->result === null){
 			$this->execute();
 		}
@@ -329,7 +332,7 @@ class Model {
 				$rows[$row[$col]] = $row;
 			}
 		}
-		$this->free_result();
+		$this->freeResult();
 		return $rows;
 	}
 	
@@ -339,7 +342,7 @@ class Model {
 	 * @param string $col
 	 * @return array
 	 */
-	public function fetch_col($key, $col = null) {
+	public function fetchCol($key, $col = null) {
 		if($this->result === null){
 			$this->execute();
 		}
@@ -355,7 +358,7 @@ class Model {
 				$arr[$row[$key]] = $row[$col];
 			}
 		}
-		$this->free_result();
+		$this->freeResult();
 		return $arr;
 	}
 	
@@ -364,12 +367,13 @@ class Model {
 	 * @param number $fetch_style
 	 * @return array
 	 */
-	public function fetch_row($fetch_style = PDO::FETCH_ASSOC) {
+	public function fetchRow($fetch_style = PDO::FETCH_ASSOC) {
+		$this->limit(1);
 		if($this->result === null){
 			$this->execute();
 		}
 		$row = $this->result->fetch($fetch_style);
-		$this->free_result();
+		$this->freeResult();
 		return $row;
 	}
 	
@@ -378,13 +382,14 @@ class Model {
 	 * @param number $col
 	 * @return string
 	 */
-	public function fetch_one($col = 0) {
+	public function fetchOne($col = 0) {
+		$this->limit(1);
 		if($this->result === null){
 			$this->execute();
 		}
 		$row = $this->result->fetch(PDO::FETCH_NUM);
 		$val = $row[$col];
-		$this->free_result();
+		$this->freeResult();
 		return $val;
 	}
 	
@@ -419,7 +424,8 @@ class Model {
 		$this->sql .= $this->where($where);
 		$this->execute();
 		
-		return $this->select($where, $col)->fetch_one();
+// 		return $this->select($where, $col)->fetch_one();
+		return $this;
 	}
 	
 	/**
@@ -445,5 +451,16 @@ class Model {
 			unset($data[$this->pk]);
 			return $this->update($where, $data);
 		}
+	}
+	
+	/**
+	 * 获取外键数据
+	 * @param array $rows
+	 * @param string $key
+	 * @return array
+	 */
+	public function foreignKey(&$rows, $key='id') {
+		$ids = rowsGetField($rows, $key);
+		return $this->select(array("`{$this->pk}` in (#)" => array($ids)))->fetchAll($this->pk);
 	}
 }

@@ -10,9 +10,10 @@ class View {
 	public $tplpath;			// 模板目录
 	public $outpath;			// 输出目录
 	public $name;				// 模板名称
-	public $data = array();		// 绑定数据
 	public $check = true;		// 检查更新
 	public $message_name;		// 消息模板
+	public $extension = '.htm';	// 模板后缀名
+	public $data = array();		// 绑定数据
 	
 	/**
 	 * 试图类
@@ -68,7 +69,7 @@ class View {
     public function display($_view_name_='') {
     	$_view_name_ = empty($_view_name_) ? $this->name : $_view_name_;
     	extract($this->data);
-    	include $this->path($_view_name_);
+    	require $this->path($_view_name_);
     }
 	
 	/**
@@ -80,13 +81,13 @@ class View {
 	public function path($name = '') {
 		$name = empty($name) ? $this->name : $name;
 		$outfile = $this->outpath.'/'.$name.'.php';
-		$tplfile = $this->tplpath.'/'.$name.'.htm';
+		$tplfile = $this->tplpath.'/'.$name.$this->extension;
 		if ($this->check && (!file_exists($outfile) || filemtime($outfile)<filemtime($tplfile))) {
 			if(!file_exists($tplfile)){
 				throw new Exception("View: $tplfile not found!");
 			}
-			return $this->parse(file_get_contents($tplfile));
-			$html = $this->parse($name);
+			$html = $this->parse(file_get_contents($tplfile));
+// 			$html = $this->parse($name);
 			$outdir = dirname($outfile);
 			if(!file_exists($outdir)){
 				mkdir($outdir, 0700, true);
@@ -111,7 +112,7 @@ class View {
 		
 		$html = preg_replace('/{(\$[^}]+)}/', '<?php echo \1; ?>', $html);
 		$html = preg_replace('/{=([^}]+)}/', '<?php echo \1; ?>', $html);
-		$html = preg_replace('/{|([^}]+)}/', '<?php \1; ?>', $html);
+		$html = preg_replace('/{_([^}]+)}/', '<?php \1; ?>', $html);
 		//$html = preg_replace('/{(\w+) ([^}]+)}/', '<?php echo $v->tag_\1(\2); ? >', $html); //自动标签
 		
 		return $html;
