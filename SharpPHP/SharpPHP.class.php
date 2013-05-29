@@ -32,7 +32,7 @@ class SharpPHP {
 		
 		// 获得请求的Controller和Action
 		define('APP_CONTROLLER', ucfirst(isset($_GET['c']) ? $_GET['c'] : 'Index'));
-		define('APP_ACTION', isset($_GET['a']) ? $_GET['a'] : 'Index');
+		define('APP_ACTION', isset($_GET['a']) ? $_GET['a'] : 'index');
 		$this->controller_name = APP_MODULE.APP_CONTROLLER.'Controller';
 		$this->action_name = APP_ACTION.'Action';
 		

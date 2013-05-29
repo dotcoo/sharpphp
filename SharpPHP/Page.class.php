@@ -4,12 +4,11 @@ if (!defined('SharpPHP')) { exit(); }
 /* 分页样式
 <style>
 .pagebar {text-align:center;}
-.pagebar span, .pagebar a {border:1px #DDD solid;margin:2px 2px;display:inline-block;width:40px;height:24px;line-height:24px;}
-.pagebar .long {width:80px;}
+.pagebar span, .pagebar a {border:1px #DDD solid;margin:1px;display:inline-block;padding:4px;}
 .pagebar a {color:black;text-decoration:none;}
-.pagebar span.current {color:#999;}
+.pagebar span {color:#999;}
 </style>
- */
+*/
 
 /**
  * SharpPHP Page class
@@ -23,104 +22,87 @@ class Page {
 	public $last;						// 总共页数
 	public $prev_text = '&lt;上一页';		// 上一页
 	public $next_text = '下一页&gt;';		// 下一页
-	public $half = 2;					// 平均显示数量
-	public $url;						// url地址
-	public $params = array();			// GET参数
-	
+	public $half = 4;					// 平均显示数量
+	// 	public $url;						// url地址
+	// 	public $params = array();			// GET参数
+
 	/**
 	 * Page分页组件
 	 * @param number $total
 	 * @param number $pagesize
 	 * @param number $page
-	 */
-	function __construct($total, $pagesize=15, $page=null) {
+	*/
+	function __construct($total, $pagesize=15, $page=1) {
 		$this->total = $total;
-		$this->page = empty($page) ? $_GET['page'] : $page;
+		$this->page = isset($_GET['page']) && is_numeric($_GET['page']) ? intval($_GET['page']) : $page;
 		$this->pagesize = $pagesize;
 	}
-	
-	/**
-	 * 每页的链接地址
-	 * @param number $page
-	 * @return string
-	 */
-	public function link($page) {
-		$this->params['page'] = $page;
-		$query = http_build_query($this->params);
-		return "$this->url?$query";
-	}
-	
+
 	/**
 	 * 显示分页代码
 	 * @return string
 	 */
-	public function show() {
+	public function show($params = array()) {
 		if (empty($this->total)) {
 			return '<div class="pagebar">暂无数据!</div>';
 		}
-		
-		$urls = parse_url($_SERVER['REQUEST_URI']);
-		$this->url = $urls['path'];
-		parse_str(isset($urls['query'])?$urls['query']:'', $this->params);
-		
-		$this->last = intval(($this->total+$this->pagesize-1)/$this->pagesize);
-		$this->page = $this->page < 1 ? 1 : $this->page;
-		$this->page = $this->page > $this->last ? $this->last : $this->page;
-		
-		$len = $this->half * 2 + 1;
 
+		$urls = parse_url($_SERVER['REQUEST_URI']);
+		if (empty($params)) {
+			if (isset($urls['query'])) {
+				parse_str($urls['query'], $params);
+			}
+		}
+		if (isset($params)) {
+			unset($params['page']);
+		}
+		$url = $urls['path'].'?'.http_build_query($params).(empty($params)?'':'&');
+
+		$this->last = intval(($this->total+$this->pagesize-1)/$this->pagesize);
+		$this->page = $this->page < 1 || $this->page > $this->last ? 1 : $this->page;
+		$start = $this->page - $this->half;
+		$end = $this->page + $this->half;
+		$length = $this->half * 2;
+		
+		if ($start < 1) {
+			$start = 1;
+			$end = $start+$length < $this->last ? $start+$length : $this->last;
+		}
+		if ($end > $this->last) {
+			$end = $this->last;
+			$start = $end-$length > 1 ? $end-$length : 1;
+		}
+		echo "1, $start, $end, $this->last";
 		$html = '<div class="pagebar">';
+		
 		// 上一页
 		if ($this->page == 1) {
-			$html .= '<span class="long current">'.$this->prev_text.'</span>';
+			$html .= '<span>首页</span>';
+			$html .= '<span>上一页</span>';
 		} else {
-			$html .= '<a href="'.$this->link($this->page-1).'" class="long">'.$this->prev_text.'</a>';
+			$html .= '<a href="'.$url.'page=1">首页</a>';
+			$html .= '<a href="'.$url.'page='.($this->page-1).'">上一页</a>';
 		}
 		
-		if ($this->last > $len) {
-			$start = $this->page - $this->half;
-			if ($this->page - $this->half < 1) {
-				$start = 1;
-			}
-			if ($this->page + $this->half > $this->last) {
-				$start = $this->last + 1 - $len;
-			}
-			
-			// 第一页
-			if ($this->page - $this->half > 1) {
-				$html .= '<a href="'.$this->link(1).'">1</a>';
-			}
-			if ($this->page - $this->half > 2) {
-				$html .= '...';
-			}
-		} else {
-			$start = 1;
-		}
-		
-		for ($i=0, $list=$start+$i; $i<$len &&  $list<= $this->last; $i++, $list++) {
-			if ($list == $this->page) { 
-				$html .= '<span class="current">'.$list.'</span>';
+		// 页数
+		for ($i=$start; $i<=$end; $i++) {
+			if ($this->page == $i) {
+				$html .= '<span>'.$i.'</span>';
 			} else {
-				$html .= '<a href="'.$this->link($list).'">'.$list.'</a>';
-			}
+				$html .= '<a href="'.$url.'page='.$i.'">'.$i.'</a>';
+			} 
 		}
 		
-		if ($this->last > $len) {
-			// 最后一夜
-			if ($this->last - $this->half - 1 > $this->page) {
-				$html .= '...';
-			}
-			if ($this->last - $this->half > $this->page) {
-				$html .= '<a href="'.$this->link($this->last).'">'.$this->last.'</a>';
-			}
-		}
 		// 下一页
 		if ($this->page == $this->last) {
-			$html .= '<span class="long current">'.$this->next_text.'</span>';
+			$html .= '<span>下一页</span>';
+			$html .= '<span>尾页</span>';
 		} else {
-			$html .= '<a href="'.$this->link($this->page+1).'" class="long">'.$this->next_text.'</a>';
+			$html .= '<a href="'.$url.'page='.($this->page+1).'">下一页</a>';
+			$html .= '<a href="'.$url.'page='.$this->last.'">尾页</a>';
 		}
+		
 		$html .= '</div>';
 		return $html;
-	} 
+	}
 }

@@ -10,12 +10,12 @@ class Model {
 	public static $global_pdo;		// 全局pdo对象
 	public static $global_prefix;	// 全局表前缀
 	public static $global_pk;		// 全局表主键
-	public static $global_pagesize;	// 全局分页打消
+	public static $global_pagesize;	// 全局分页数
 	
-	public $pdo;					// 私有pdo对象
+	public $pdo;					// pdo对象
 	public $table_name;				// 表名
 	public $prefix = '';			// 表前缀
-	public $full_table_name;		// 表全名
+	public $full_table_name;		// 完整表名
 	public $pk;						// 主键
 	public $sql = '';				// 准备执行的sql
 	public $params = array();		// 参数
@@ -159,38 +159,39 @@ class Model {
 		return $this;
 	}
 
-	// SQL Execute
+	// SQL Query
 	
 	/**
 	 * 执行sql语句
 	 * @param string $sql
 	 * @param array $params
 	 * @throws Exception
-	 * @return boolean
+	 * @return Model
 	 */
-	public function execute($sql=null, $params=null) {
+	public function query($sql=null, $params=null) {
 		$sql = is_null($sql) ? $this->sql : $sql;
 		$params = is_null($params) ? $this->params : $params;
 		$this->sqls[] = array($sql, $params);
 		
 		$this->result = $this->pdo->prepare($sql);
 		if (false === $this->result) {
-			var_dump($this->pdo->errorInfo());
-			throw new Exception('Model: PDO prepare error, errorCode ' . $this->pdo->errorCode() . '.');
+			throw new Exception('Model: PDO prepare error. errorCode: ' . $this->pdo->errorCode() . '.');
 		}
 		
 		$len = count($params);
 		for($i=0; $i<$len; $i++) {
-			$this->result->bindValue($i+1, $params[$i]);
+			$ok = $this->result->bindValue($i+1, $params[$i]);
+			if (false === $ok) {
+				throw new Exception('Model: PDO bindValue error. errorCode: ' . $this->pdo->errorCode() . '.');
+			}
 		}
 		
 		$ok = $this->result->execute();
 		if (false === $ok) {
-			var_dump($this->result->errorInfo());
-			throw new Exception('Model: PDO execute error, errorCode ' . $this->pdo->errorCode() . '.');
+			throw new Exception('Model: PDO execute error. errorCode: ' . $this->pdo->errorCode() . '.');
 		}
 		
-		return $ok;
+		return $this;
 	}
 
 	/**
@@ -211,6 +212,14 @@ class Model {
 	 */
 	public function insertId() {
 		return $this->pdo->lastInsertId();
+	}
+
+	/**
+	 * 影响的行数
+	 * @return number
+	 */
+	public function rowCount() {
+		return $this->result->rowCount();
 	}
 	
 	// SQL Transaction
@@ -244,7 +253,7 @@ class Model {
 	/**
 	 * 添加数据
 	 * @param array $data
-	 * @return number
+	 * @return Model
 	 */
 	public function insert($data) {
 		$cols = $vals = array();
@@ -257,7 +266,45 @@ class Model {
 		$cols = implode(', ', $cols);
 		$vals = implode(', ', $vals);
 		$this->sql = "INSERT INTO `{$this->full_table_name}` ($cols) VALUES($vals)";
-		return $this->execute()->insertId();
+		return $this->query();
+	}
+	
+	/**
+	 * 更新数据
+	 * @param array $where
+	 * @param array $data
+	 * @throws Exception
+	 * @return Model
+	 */
+	public function update($where, $data) {
+		if (empty($where)) {
+			throw new Exception('Model: UPDATE not found where!');
+		}
+		$this->params = array();
+		$sets = array();
+		foreach ($data as $col=>$val) {
+			$sets[] = "`$col` = ?";
+			$this->params[] = $val;
+		}
+		$this->sql = "UPDATE `{$this->full_table_name}` SET " . implode(', ', $sets);
+		$this->sql .= $this->where($where);
+		return $this->query();
+	}
+	
+	/**
+	 * 删除数据
+	 * @param array $where
+	 * @throws Exception
+	 * @return Model
+	 */
+	public function delete($where) {
+		if (empty($where)) {
+			throw new Exception('Model: DELETE not found where!');
+		}
+		$this->params = array();
+		$this->sql = "DELETE FROM `{$this->full_table_name}`";
+		$this->sql .= $this->where($where);
+		return $this->query();
 	}
 	
 	/**
@@ -275,44 +322,6 @@ class Model {
 		return $this;
 	}
 	
-	/**
-	 * 更新数据
-	 * @param array $where
-	 * @param array $data
-	 * @throws Exception
-	 * @return boolean
-	 */
-	public function update($where, $data) {
-		if (empty($where)) {
-			throw new Exception('Model: UPDATE not found where!');
-		}
-		$this->params = array();
-		$sets = array();
-		foreach ($data as $col=>$val) {
-			$sets[] = "`$col` = ?";
-			$this->params[] = $val;
-		}
-		$this->sql = "UPDATE `{$this->full_table_name}` SET " . implode(', ', $sets);
-		$this->sql .= $this->where($where);
-		return $this->execute();
-	}
-	
-	/**
-	 * 删除数据
-	 * @param array $where
-	 * @throws Exception
-	 * @return boolean
-	 */
-	public function delete($where) {
-		if (empty($where)) {
-			throw new Exception('Model: DELETE not found where!');
-		}
-		$this->params = array();
-		$this->sql = "DELETE FROM `{$this->full_table_name}`";
-		$this->sql .= $this->where($where);
-		return $this->execute();
-	}
-	
 	// Model Fetch
 	
 	/**
@@ -320,20 +329,19 @@ class Model {
 	 * @param string $col
 	 * @return array
 	 */
-	public function fetchAll($col = null) {
+	public function fetchAll($col = null, $fetch_style = PDO::FETCH_ASSOC) {
 		if($this->result === null){
-			$this->execute();
+			$this->query();
 		}
-		$rows = array();
-		while ($row = $this->result->fetch(PDO::FETCH_ASSOC)) {
-			if (empty($col)) {
-				$rows[] = $row;
-			} else {
-				$rows[$row[$col]] = $row;
+		$rows = $this->result->fetchAll($fetch_style);
+		$rows_assoc = array();
+		if($col != null){
+			foreach ($rows as $row) {
+				$rows_assoc[$row[$col]] = $row;
 			}
 		}
 		$this->freeResult();
-		return $rows;
+		return $col == null ? $rows : $rows_assoc;
 	}
 	
 	/**
@@ -344,17 +352,20 @@ class Model {
 	 */
 	public function fetchCol($key, $col = null) {
 		if($this->result === null){
-			$this->execute();
+			$this->query();
 		}
 		if (empty($col)) {
 			$col = $key;
 			$key = null;
 		}
+		$rows = $row = $this->result->fetchAll(PDO::FETCH_ASSOC);
 		$arr = array();
-		while ($row = $this->result->fetch(PDO::FETCH_ASSOC)) {
-			if (empty($key)) {
+		if (empty($key)) {
+			foreach ($rows as $row) {
 				$arr[] = $row[$col];
-			} else {
+			}
+		} else {
+			foreach ($rows as $row) {
 				$arr[$row[$key]] = $row[$col];
 			}
 		}
@@ -370,7 +381,7 @@ class Model {
 	public function fetchRow($fetch_style = PDO::FETCH_ASSOC) {
 		$this->limit(1);
 		if($this->result === null){
-			$this->execute();
+			$this->query();
 		}
 		$row = $this->result->fetch($fetch_style);
 		$this->freeResult();
@@ -385,7 +396,7 @@ class Model {
 	public function fetchOne($col = 0) {
 		$this->limit(1);
 		if($this->result === null){
-			$this->execute();
+			$this->query();
 		}
 		$row = $this->result->fetch(PDO::FETCH_NUM);
 		$val = $row[$col];
@@ -396,7 +407,7 @@ class Model {
 	/**
 	 * 获取符合条件的行数
 	 * @param array $where
-	 * @return number
+	 * @return string
 	 */
 	public function count($where = array()) {
 		return $this->select($where, 'count(*)')->fetch_one();
@@ -409,23 +420,16 @@ class Model {
 	 * @param int $val
 	 * @param bool $safe
 	 * @throws Exception
-	 * @return int
+	 * @return Model
 	 */
-	public function plus($where, $col, $val = 1, $safe=false) {
+	public function plus($where, $col, $val = 1) {
 		if (empty($where)) {
 			throw new Exception('Model: PLUS not found where!');
 		}
 		$this->params = array($val);
-		if ($safe) {
-			$this->sql = "UPDATE `{$this->full_table_name}` SET `$col` = `$col` + ?";
-		} else {
-			$this->sql = "UPDATE `{$this->full_table_name}` SET `$col` =  last_insert_id(`$col` + ?)";
-		}
+		$this->sql = "UPDATE `{$this->full_table_name}` SET `$col` =  last_insert_id(`$col` + ?)";
 		$this->sql .= $this->where($where);
-		$this->execute();
-		
-// 		return $this->select($where, $col)->fetch_one();
-		return $this;
+		return $this->query();
 	}
 	
 	/**
@@ -441,7 +445,7 @@ class Model {
 	/**
 	 * 保存数据,自动判断是新增还是更新
 	 * @param array $data
-	 * @return number|boolean
+	 * @return Model
 	 */
 	public function save($data) {
 		if (empty($data[$this->pk])) {
@@ -460,7 +464,10 @@ class Model {
 	 * @return array
 	 */
 	public function foreignKey(&$rows, $key='id') {
-		$ids = rowsGetField($rows, $key);
+		$ids = array();
+		foreach($rows as $row) {
+			$ids[] = $row[$key];
+		}
 		return $this->select(array("`{$this->pk}` in (#)" => array($ids)))->fetchAll($this->pk);
 	}
 }
