@@ -23,8 +23,6 @@ class Page {
 	public $prev_text = '&lt;上一页';		// 上一页
 	public $next_text = '下一页&gt;';		// 下一页
 	public $half = 4;					// 平均显示数量
-	// 	public $url;						// url地址
-	// 	public $params = array();			// GET参数
 
 	/**
 	 * Page分页组件

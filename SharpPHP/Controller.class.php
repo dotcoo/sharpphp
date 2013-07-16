@@ -15,7 +15,7 @@ class Controller {
 	 * @param View $view
 	 */
 	public function notFoundAction($view) {
-		$view->message('not found '.ACTION.' Action!');
+		$view->message('Controller <b>'.APP_CONTROLLER.'</b> not found <b>'.APP_ACTION.'</b> Action!', null, 1000);
 	}
 	
 	/**

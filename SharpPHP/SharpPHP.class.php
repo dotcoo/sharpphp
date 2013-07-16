@@ -68,7 +68,10 @@ class SharpPHP {
 				'db_pass' => '', // 数据库密码
 				'db_name' => 'text', // 数据库名称
 				'db_charset' => 'utf8', // 数据库编码
-				'db_options' => array(PDO::MYSQL_ATTR_INIT_COMMAND => 'set names utf8;'),
+				'db_options' => array(
+						PDO::MYSQL_ATTR_INIT_COMMAND => 'set names utf8;',
+						PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+				),
 		
 				// 模型
 				'model_prefix' => '', // 表前缀

@@ -422,7 +422,7 @@ class Model {
 	 * @throws Exception
 	 * @return Model
 	 */
-	public function plus($where, $col, $val = 1) {
+	public function incr($where, $col, $val = 1) {
 		if (empty($where)) {
 			throw new Exception('Model: PLUS not found where!');
 		}
@@ -463,11 +463,11 @@ class Model {
 	 * @param string $key
 	 * @return array
 	 */
-	public function foreignKey(&$rows, $key='id') {
+	public function foreignKey(&$rows, $key='id', $field='*') {
 		$ids = array();
 		foreach($rows as $row) {
 			$ids[] = $row[$key];
 		}
-		return $this->select(array("`{$this->pk}` in (#)" => array($ids)))->fetchAll($this->pk);
+		return $this->select(array("`{$this->pk}` in (#)" => array($ids)), $field)->fetchAll($this->pk);
 	}
 }
