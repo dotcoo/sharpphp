@@ -1,5 +1,5 @@
 <?php
-class HomeIndexController extends Controller {
+class WebIndexController extends Controller {
 	public function indexAction($view) {
 		$model = new Model('user', 'uid');
 		

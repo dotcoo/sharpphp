@@ -7,13 +7,18 @@ if (!defined('SharpPHP')) { exit(); }
  * @link https://github.org/dotcoo/sharpphp
  */
 class View {
+	public $sharpphp;
+	
 	public $tplpath;			// 模板目录
 	public $outpath;			// 输出目录
 	public $name;				// 模板名称
-	public $check = true;		// 检查更新
-	public $message_name;		// 消息模板
-	public $extension = '.htm';	// 模板后缀名
+	public $config = array();	// 配置信息
 	public $data = array();		// 绑定数据
+	
+	public $extension;			// 模板文件后缀
+	public $content_type;		// 模板mime类型
+	public $check;				// 检车模板更新
+	public $message_tpl;		// 消息模板文件
 	
 	/**
 	 * 试图类
@@ -61,15 +66,62 @@ class View {
     public function __unset($name) {
         unset($this->data[$name]);
     }
+
+    /**
+     * 初始化配置
+     */
+    public function initConfig($config_view=null) {
+    	if (isset($config_view)) {
+    	} elseif ($this->sharpphp instanceof SharpPHP) {
+    		$config_view = $this->sharpphp->getConfig('view');
+    	} else {
+    		$config_view = array();
+    	}
+    	
+    	$default_view = array(
+				'extension' => '.htm',							// 模板扩展名
+				'content_type' => 'text/html; charset=utf-8', 	// 页面mime类型
+				'check' => true, 								// 检查模板更新
+				'message_tpl' => '', 					// 消息模板名称
+    	);
+    	$config_view = array_merge($default_view, $config_view);
+    	$this->setConfig($config_view);
+    	
+    	// 设置属性
+    	$this->extension = $config_view['extension'];
+    	$this->prefix = $config_view['content_type'];
+    	$this->check = $config_view['check'];
+    	$this->message_tpl = $config_view['message_tpl'];
+    }
+    
+    public function getConfig($name=null) {
+    	if (isset($name)) {
+    		return isset($this->config[$name]) ? $this->config[$name] : '';
+    	} else {
+    		return $this->config;
+    	}
+    }
+    
+    public function setConfig($name, $value=null) {
+    	if (isset($value)) {
+			$this->config[$name] = $value;
+		} else {
+			$this->config = $name;
+		}
+    	if ($this->sharpphp instanceof SharpPHP) {
+    		$this->sharpphp->setConfig('view', $this->getConfig());
+    	}
+    }
     
     /**
      * 执行模板
-     * @param string $_view_name_
+     * @param string $__name
      */
-    public function display($_view_name_='') {
-    	$_view_name_ = empty($_view_name_) ? $this->name : $_view_name_;
+    public function display($__name='', $content_type=null) {
+    	$__name = empty($__name) ? $this->name : $__name;
+    	header('Content-Type: '.(isset($content_type)?$content_type:$this->content_type));
     	extract($this->data);
-    	require $this->path($_view_name_);
+    	require $this->path($__name);
     }
 	
 	/**
@@ -78,13 +130,13 @@ class View {
 	 * @throws Exception
 	 * @return string
 	 */
-	public function path($name = '') {
-		$name = empty($name) ? $this->name : $name;
+	private function path($name = null) {
+		$name = isset($name) ? $name : $this->name;
 		$outfile = $this->outpath.'/'.$name.'.php';
 		$tplfile = $this->tplpath.'/'.$name.$this->extension;
 		if ($this->check && (!file_exists($outfile) || filemtime($outfile)<filemtime($tplfile))) {
 			if(!file_exists($tplfile)){
-				throw new Exception("View: $tplfile not found!");
+				throw new Exception("View: template file $tplfile not found!");
 			}
 			$html = $this->parse(file_get_contents($tplfile));
 // 			$html = $this->parse($name);
@@ -102,7 +154,7 @@ class View {
 	 * @param string $html
 	 * @return string
 	 */
-	public function parse($html){
+	private function parse($html){
 		$html = preg_replace_callback('/{include ([^}]+)}/', array($this, 'includes'), $html);
 		$html = preg_replace('/{if ([^}]+)}/', '<?php if (\1) { ?>', $html);
 		$html = preg_replace('/{elseif ([^}]+)}/', '<?php } elseif (\1) { ?>', $html);
@@ -124,9 +176,9 @@ class View {
 	 * @throws Exception
 	 * @return string
 	 */
-	public function includes($file) {
+	private function includes($file) {
 		$file = is_array($file)?$file[1]:$file;
-		$tplfile = $this->tplpath.'/'.$file.'.htm';
+		$tplfile = $this->tplpath.'/'.$file.$this->extension;
 		if(!file_exists($tplfile)){
 			throw new Exception("View: $tplfile not found!");
 		}
@@ -150,11 +202,11 @@ class View {
 	 */
 	public function message($info, $url=null, $sec=3) {
 		$sec = $sec * 1000;
-		if (!empty($this->message_name)) {
+		if (!empty($this->message_tpl)) {
 			$this->info = $info;
 			$this->url = $url;
 			$this->sec = $sec;
-			$this->display($this->message_name);
+			$this->display($this->message_tpl);
 			exit();
 		}
 		
@@ -185,7 +237,7 @@ MSG;
 	 * @param number $status
 	 * @param array $data
 	 */
-	public function json($info, $status=0, &$data=array()) {
+	public function json($info, $status=0, $data=array()) {
 		$data['info'] = $info;
 		$data['status'] = $status;
 		if (!defined('JSON_UNESCAPED_UNICODE')) {

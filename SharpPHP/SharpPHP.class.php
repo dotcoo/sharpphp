@@ -9,149 +9,191 @@ include 'common.func.php';
  * @link https://github.org/dotcoo/sharpphp
  */
 class SharpPHP {
-	public $controller;
-	public $view;
-	
-	public $controller_name = 'index';
-	public $action_name = 'index';
+	private $config = array();
+	private $controller;
+	private $view;
+	private $pdo;
 
 	// 构造函数
-	function __construct(&$config) {
-		$this->_config = $config;
+	function __construct() {}
+	
+	// 获取配置信息
+	public function getConfig($name=null) {
+		if (isset($name)) {
+			return isset($this->config[$name]) ? $this->config[$name] : array();
+		} else {
+			return $this->config;
+		}
+	}
+	
+	// 设置配置信息
+	public function setConfig($name, $value=null) {
+		if (isset($value)) {
+			$this->config[$name] = $value;
+		} else {
+			$this->config = $name;
+		}
+	}
+	
+	// 获取控制器
+	public function getController() {
+		return $this->controller;
+	}
+	
+	// 设置控制器
+	public function setController($controller) {
+		$this->controller = $controller;
+	}
+	
+	// 获取试图
+	public function getView() {
+		return $this->view;
+	}
+	
+	// 设置试图
+	public function setView($view) {
+		$this->view = $view;
+	}
+	
+	// 获取试图
+	public function getPDO() {
+		return $this->pdo;
 	}
 	
 	// 初始化SharpPHP
-	public function init() {
-		// SharpPHP路径
-		define('SHARPPHP_PATH', __DIR__);
+	public function init($config) {
+		$this->setConfig($config);
 		
-		$config = $this->config($this->_config);
+		// 应用默认配置
+		$this->initConfig();
+		
+		// 初始化常量
+		$this->initConst();
 		
 		// 自动加载类
 		spl_autoload_register(array($this, 'autoload'));
 		
-		// 获得请求的Controller和Action
-		define('APP_CONTROLLER', ucfirst(isset($_GET['c']) ? $_GET['c'] : 'Index'));
-		define('APP_ACTION', isset($_GET['a']) ? $_GET['a'] : 'index');
-		$this->controller_name = APP_MODULE.APP_CONTROLLER.'Controller';
-		$this->action_name = APP_ACTION.'Action';
-		
 		// 连接数据库
-		$pdo = $this->createPdo($config);
+		$pdo = $this->createPDO();
 		
 		// 创建视图
-		$view = $this->createView($config);
+		$view = $this->createView();
 		
 		// 创建控制器
-		$controller = $this->createColltroller($config);
+		$controller = $this->createColltroller();
 		
-		// 模型
-		Model::$global_pdo = $pdo;
-		Model::$global_prefix = $config['model_prefix'];
-		Model::$global_pk = $config['model_pk'];
-		Model::$global_pagesize = $config['model_pagesize'];
-		
-		return array($config, $pdo, $view, $controller);
+		return array($this->getConfig(), $pdo, $view, $controller);
 	}
 	
 	// 配置文件
-	public function config(&$config) {
-		// 配置信息
-		$default = array(
-				// 项目
-				'app_path' => $_SERVER['DOCUMENT_ROOT'].'/App', // 项目路率
-				'app_module' => 'Home', // 默认模块
-		
-				// 数据库
-				'db_host' => '127.0.0.1', // 数据库地址
-				'db_user' => 'root', // 数据库用户
-				'db_pass' => '', // 数据库密码
-				'db_name' => 'text', // 数据库名称
-				'db_charset' => 'utf8', // 数据库编码
-				'db_options' => array(
-						PDO::MYSQL_ATTR_INIT_COMMAND => 'set names utf8;',
-						PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-				),
-		
-				// 模型
-				'model_prefix' => '', // 表前缀
-				'model_pk' => 'id', // 默认主键名称
-				'model_pagesize' => 15, // 默认分页打消
-		
-				// 试图
-				'view_extension' => '.htm', // 模板扩展名
-				'view_charset' => 'utf-8', // 默认字符编码
-				'view_check' => true, // 检查模板更新
-				'view_message_name' => '', // 消息模板名称
+	private function initConfig() {
+		// 基本配置
+		$config_app = $this->getConfig('app');
+		$default_app = array(
+				'path' => $_SERVER['DOCUMENT_ROOT'].'/App', // 项目路径
+				'module' => 'Web', 						// 默认模块
 		);
-		$config = array_merge($default, $config);
+		$config_app = array_merge($default_app, $config_app);
+		$this->setConfig('app', $config_app);
 		
-		define('APP_PATH', $config['app_path']);
-		define('APP_MODULE', $config['app_module']);
-		
-		return $config;
+		// 数据库配置
+		$config_db = $this->getConfig('db');
+		$default_db = array(
+				'host' => '127.0.0.1', 	// 数据库地址
+				'user' => 'root', 		// 数据库用户
+				'pass' => '', 			// 数据库密码
+				'name' => 'test', 		// 数据库名称
+				'charset' => 'utf8', 	// 数据库编码
+		);
+		$config_db = array_merge($default_db, $config_db);
+		$config_db['options'] = array(
+				PDO::MYSQL_ATTR_INIT_COMMAND => "set names {$config_db['charset']};",	// 连接字符集
+				PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,		// 显示SQL错误
+		);
+		$this->setConfig('db', $config_db);
 	}
 	
-	// 运行
-	public function run() {
-		if (!method_exists($this->controller, $this->action_name)) {
-			$this->controller->{'notFoundAction'}($this->view);
-			return;
-		}
-		$this->controller->{$this->action_name}($this->view);
+	// 初始化常量
+	private function initConst() {
+		// SharpPHP根目录
+		define('SHARPPHP_PATH', __DIR__);
+		
+		$config_app = $this->getConfig('app');
+		// 项目根目录
+		define('APP_PATH', $config_app['path']);
+		// 默认模块
+		define('APP_MODULE', $config_app['module']);
+		
+		// 获得请求的Controller和Action
+		define('APP_CONTROLLER', ucfirst(isset($_GET['c']) ? $_GET['c'] : 'Index'));
+		define('APP_ACTION', isset($_GET['a']) ? $_GET['a'] : 'index');
 	}
 	
 	// 自动载入
 	public function autoload($class_name) {
-		// 核心类
-		$core_class = array('Cache', 'Controller', 'Image', 'Log', 'Model', 'Page', 'View');
+		$core_class = array('Controller', 'Model', 'Page', 'View');
+		
 		if (in_array($class_name, $core_class)) {
+			// 核心类
 			include SHARPPHP_PATH.'/'.$class_name.'.class.php';
-			return;
-		}
-		// 模型
-		if (substr($class_name, -5) == 'Model') {
+		} elseif (substr($class_name, -5) == 'Model') {
+			// 模型
 			include APP_PATH.'/Model/'.$class_name.'.class.php';
 			return;
-		}
-		// 控制器
-		if (substr($class_name, -10) == 'Controller') {
+		} elseif (substr($class_name, -10) == 'Controller') {
+			// 控制器
 			include APP_PATH.'/Controller/'.APP_MODULE.'/'.$class_name.'.class.php';
 			return;
+		} else {
+			throw new Exception("SharpPHP: class $class_name not found!");
 		}
 	}
 	
-	public function createPdo(&$config) {
-		if (!is_array($config['db_options'])) {
-			$config['db_options'] = array(PDO::MYSQL_ATTR_INIT_COMMAND => "set names {$config['charset']};");
-		}
-	
-		$dsn = "mysql:host={$config['db_host']};dbname={$config['db_name']}";
-		$this->pdo = new PDO($dsn, $config['db_user'], $config['db_pass'], $config['db_options']);
-		return $this->pdo;
+	// 创建PDO对象
+	private function createPDO() {
+		$config_db = $this->getConfig('db');
+		$dsn = "mysql:host={$config_db['host']};dbname={$config_db['name']}";
+		
+		$pdo = new PDO($dsn, $config_db['user'], $config_db['pass'], $config_db['options']);
+		
+		$this->pdo = $pdo;
+		Model::$sharpphp = $this;
+		return $pdo;
 	}
 	
-	public function createView(&$config) {
-		$this->view = new View(APP_PATH.'/View/'.APP_MODULE, APP_PATH.'/Data/View/'.APP_MODULE, APP_CONTROLLER.'/'.APP_ACTION);
-		$this->view->extension = $config['view_extension'];
-		$this->view->check = $config['view_check'];
-		$this->view->charset = $config['view_charset'];
-		$this->view->message_name = $config['view_message_name'];
-		$this->view->config = $config;
-		return $this->view;
+	// 创建View对象
+	private function createView() {
+		$tplpath = APP_PATH.'/View/'.APP_MODULE;
+		$outpath = APP_PATH.'/Data/View/'.APP_MODULE;
+		$name = APP_CONTROLLER.'/'.APP_ACTION;
+		
+		$view = new View($tplpath, $outpath, $name);
+		$view->sharpphp = $this;
+		$view->initConfig();
+		
+		$this->view = $view;
+		return $view;
 	}
 	
-	public function createColltroller(&$config) {
-		if (!class_exists($this->controller_name)) {
-			if (!class_exists(APP_MODULE.'EmptyController')) {
-				throw new Exception("SharpPHP: class {$this->controller_name} not found!");
-			}
-			$this->controller_name = 'EmptyController';
-			$this->action_name = 'indexAction';
+	private function createColltroller() {
+		$controller_name = APP_MODULE.APP_CONTROLLER.'Controller';
+		
+		if (!class_exists($controller_name)) {
+			throw new Exception("SharpPHP: class {$controller_name} not found!");
 		}
-// 		$class_name = $this->controller_name;
-		$this->controller = new $this->controller_name();
-		$this->controller->config = $config;
-		return $this->controller;
+		
+		$controller = new $controller_name();
+		$controller->sharpphp = $this;
+		
+		$this->controller = $controller;
+		return $controller;
+	}
+	
+	// 运行
+	public function run() {
+		$action_name = APP_ACTION.'Action';
+		$action_name = method_exists($this->controller, $action_name) ? $action_name : 'notFoundAction';
+		
+		$this->controller->{$action_name}($this->view);
 	}
 }

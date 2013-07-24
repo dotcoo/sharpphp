@@ -7,10 +7,7 @@ if (!defined('SharpPHP')) { exit(); }
  * @link https://github.org/dotcoo/sharpphp
  */
 class Model {
-	public static $global_pdo;		// 全局pdo对象
-	public static $global_prefix;	// 全局表前缀
-	public static $global_pk;		// 全局表主键
-	public static $global_pagesize;	// 全局分页数
+	public static $sharpphp;
 	
 	public $pdo;					// pdo对象
 	public $table_name;				// 表名
@@ -29,13 +26,69 @@ class Model {
 	 * @param string $prefix
 	 * @param PDO $pdo
 	 */
-	function __construct($table_name, $pk="id", $prefix=null, $pdo=null) {
+	function __construct($table_name, $pk=null, $prefix=null, $pdo=null) {
 		$this->table_name = $table_name;
-		$this->prefix = is_null($prefix) ? self::$global_prefix : $prefix;
+		$this->pk = $pk;
+		$this->prefix = $prefix;
+		$this->pdo = $pdo;
+		
+		$this->initConfig();
+	}
+	
+	/**
+	 * 初始化配置
+	 */
+	public function initConfig($config_model=null) {
+		if (isset($config_model)) {
+    	} elseif (self::$sharpphp instanceof SharpPHP) {
+    		$config_model = self::$sharpphp->getConfig('model');
+    	} else {
+    		$config_model = array();
+    	}
+    	
+		$default_model = array(
+				'prefix' => 'sharp_',	// 表前缀
+				'pk' => 'id', 			// 表主键
+				'pagesize' => 15, 		// 默认分页数
+		);
+		$config_model = array_merge($default_model, $config_model);
+		$this->setConfig($config_model);
+		
+		// 设置属性
+		$this->prefix = isset($this->prefix) ? $this->prefix : $config_model['prefix'];
 		$this->full_table_name = $this->prefix . $this->table_name;
-		$this->pk = is_null($pk) ? self::$global_pk : $pk;
-		$this->pagesize = self::$global_pagesize;
-		$this->pdo = is_null($pdo) ? self::$global_pdo : $pdo;
+		$this->pk = isset($this->pk) ? $this->pk : $config_model['pk'];
+		$this->pagesize = $config_model['pagesize'];
+		if (self::$sharpphp instanceof SharpPHP) {
+			$this->pdo = self::$sharpphp->getPDO();
+		}
+	}
+	
+	public function getConfig($name=null) {
+		if (isset($name)) {
+			return isset($this->config[$name]) ? $this->config[$name] : '';
+		} else {
+			return $this->config;
+		}
+	}
+	
+	public function setConfig($name, $value=null) {
+		if (isset($value)) {
+			$this->config[$name] = $value;
+		} else {
+			$this->config = $name;
+		}
+		if (self::$sharpphp instanceof SharpPHP) {
+			self::$sharpphp->setConfig('model', $this->getConfig());
+		}
+	}
+	
+	public function getPDO() {
+		return $this->pdo;
+	}
+	
+	public function setPDO($pdo) {
+		$this->pdo = $pdo;
 	}
 	
 	/**
@@ -173,22 +226,22 @@ class Model {
 		$params = is_null($params) ? $this->params : $params;
 		$this->sqls[] = array($sql, $params);
 		
-		$this->result = $this->pdo->prepare($sql);
+		$this->result = $this->getPDO()->prepare($sql);
 		if (false === $this->result) {
-			throw new Exception('Model: PDO prepare error. errorCode: ' . $this->pdo->errorCode() . '.');
+			throw new Exception('Model: PDO prepare error. errorCode: ' . $this->getPDO()->errorCode() . '.');
 		}
 		
 		$len = count($params);
 		for($i=0; $i<$len; $i++) {
 			$ok = $this->result->bindValue($i+1, $params[$i]);
 			if (false === $ok) {
-				throw new Exception('Model: PDO bindValue error. errorCode: ' . $this->pdo->errorCode() . '.');
+				throw new Exception('Model: PDO bindValue error. errorCode: ' . $this->getPDO()->errorCode() . '.');
 			}
 		}
 		
 		$ok = $this->result->execute();
 		if (false === $ok) {
-			throw new Exception('Model: PDO execute error. errorCode: ' . $this->pdo->errorCode() . '.');
+			throw new Exception('Model: PDO execute error. errorCode: ' . $this->getPDO()->errorCode() . '.');
 		}
 		
 		return $this;
@@ -211,7 +264,7 @@ class Model {
 	 * @return number
 	 */
 	public function insertId() {
-		return $this->pdo->lastInsertId();
+		return $this->getPDO()->lastInsertId();
 	}
 
 	/**
@@ -229,7 +282,7 @@ class Model {
 	 * @return boolean
 	 */
 	public function begin() {
-		return $this->pdo->beginTransaction();
+		return $this->getPDO()->beginTransaction();
 	}
 	
 	/**
@@ -237,7 +290,7 @@ class Model {
 	 * @return boolean
 	 */
 	public function commit() {
-		return $this->pdo->commit();
+		return $this->getPDO()->commit();
 	}
 	
 	/**
@@ -245,7 +298,7 @@ class Model {
 	 * @return boolean
 	 */
 	public function rollBack() {
-		return $this->pdo->rollBack();
+		return $this->getPDO()->rollBack();
 	}
 
 	// Model Method

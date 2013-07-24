@@ -7,8 +7,7 @@ if (!defined('SharpPHP')) { exit(); }
  * @link https://github.org/dotcoo/sharpphp
  */
 class Controller {
-	public $module;
-	public $action;
+	public $sharpphp;
 	
 	/**
 	 * 没有找到action
@@ -49,6 +48,7 @@ class Controller {
 	 */
 	public function getForm($names) {
 		$names = explode(',', $names);
+		// $names = array_map('trim', $names);
 		$data = array();
 		foreach ($names as $name) {
 			$data[$name] = $_REQUEST[$name];
