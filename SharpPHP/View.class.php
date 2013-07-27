@@ -94,6 +94,11 @@ class View {
     	$this->message_tpl = $config_view['message_tpl'];
     }
     
+    /**
+     * 获取配置
+     * @param string $name
+     * @return string
+     */
     public function getConfig($name=null) {
     	if (isset($name)) {
     		return isset($this->config[$name]) ? $this->config[$name] : '';
@@ -102,6 +107,11 @@ class View {
     	}
     }
     
+    /**
+     * 设置配置
+     * @param string $name
+     * @param string $value
+     */
     public function setConfig($name, $value=null) {
     	if (isset($value)) {
 			$this->config[$name] = $value;
@@ -139,7 +149,6 @@ class View {
 				throw new Exception("View: template file $tplfile not found!");
 			}
 			$html = $this->parse(file_get_contents($tplfile));
-// 			$html = $this->parse($name);
 			$outdir = dirname($outfile);
 			if(!file_exists($outdir)){
 				mkdir($outdir, 0700, true);

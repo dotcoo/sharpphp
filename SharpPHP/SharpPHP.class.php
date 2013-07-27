@@ -14,10 +14,16 @@ class SharpPHP {
 	private $view;
 	private $pdo;
 
-	// 构造函数
+	/**
+	 * 构造函数
+	 */
 	function __construct() {}
 	
-	// 获取配置信息
+	/**
+	 * 获取配置信息
+	 * @param string $name 配置名称
+	 * @return array
+	 */
 	public function getConfig($name=null) {
 		if (isset($name)) {
 			return isset($this->config[$name]) ? $this->config[$name] : array();
@@ -26,7 +32,11 @@ class SharpPHP {
 		}
 	}
 	
-	// 设置配置信息
+	/**
+	 * 设置配置信息
+	 * @param string $name
+	 * @param string $value
+	 */
 	public function setConfig($name, $value=null) {
 		if (isset($value)) {
 			$this->config[$name] = $value;
@@ -35,32 +45,48 @@ class SharpPHP {
 		}
 	}
 	
-	// 获取控制器
+	/**
+	 * 获取控制器
+	 */
 	public function getController() {
 		return $this->controller;
 	}
 	
-	// 设置控制器
+	/**
+	 * 设置控制器
+	 * @param Controller $controller
+	 */
 	public function setController($controller) {
 		$this->controller = $controller;
 	}
 	
-	// 获取试图
+	/**
+	 * 获取试图
+	 */
 	public function getView() {
 		return $this->view;
 	}
 	
-	// 设置试图
+	/**
+	 * 设置试图
+	 * @param View $view
+	 */
 	public function setView($view) {
 		$this->view = $view;
 	}
 	
-	// 获取试图
+	/**
+	 * 获取试图
+	 */
 	public function getPDO() {
 		return $this->pdo;
 	}
 	
-	// 初始化SharpPHP
+	/**
+	 * 初始化SharpPHP
+	 * @param array $config
+	 * @return array
+	 */
 	public function init($config) {
 		$this->setConfig($config);
 		
@@ -85,7 +111,9 @@ class SharpPHP {
 		return array($this->getConfig(), $pdo, $view, $controller);
 	}
 	
-	// 配置文件
+	/**
+	 * 初始化配置
+	 */
 	private function initConfig() {
 		// 基本配置
 		$config_app = $this->getConfig('app');
@@ -113,7 +141,9 @@ class SharpPHP {
 		$this->setConfig('db', $config_db);
 	}
 	
-	// 初始化常量
+	/**
+	 * 初始化常量
+	 */
 	private function initConst() {
 		// SharpPHP根目录
 		define('SHARPPHP_PATH', __DIR__);
@@ -129,7 +159,11 @@ class SharpPHP {
 		define('APP_ACTION', isset($_GET['a']) ? $_GET['a'] : 'index');
 	}
 	
-	// 自动载入
+	/**
+	 * 自动载入
+	 * @param string $class_name
+	 * @throws Exception
+	 */
 	public function autoload($class_name) {
 		$core_class = array('Controller', 'Model', 'Page', 'View');
 		
@@ -149,7 +183,10 @@ class SharpPHP {
 		}
 	}
 	
-	// 创建PDO对象
+	/**
+	 * 创建PDO对象
+	 * @return PDO
+	 */
 	private function createPDO() {
 		$config_db = $this->getConfig('db');
 		$dsn = "mysql:host={$config_db['host']};dbname={$config_db['name']}";
@@ -161,7 +198,10 @@ class SharpPHP {
 		return $pdo;
 	}
 	
-	// 创建View对象
+	/**
+	 * 创建View对象
+	 * @return View
+	 */
 	private function createView() {
 		$tplpath = APP_PATH.'/View/'.APP_MODULE;
 		$outpath = APP_PATH.'/Data/View/'.APP_MODULE;
@@ -175,6 +215,11 @@ class SharpPHP {
 		return $view;
 	}
 	
+	/**
+	 * 创建Colltroller对象
+	 * @throws Exception
+	 * @return Colltroller
+	 */
 	private function createColltroller() {
 		$controller_name = APP_MODULE.APP_CONTROLLER.'Controller';
 		
@@ -189,7 +234,9 @@ class SharpPHP {
 		return $controller;
 	}
 	
-	// 运行
+	/**
+	 * 处理请求
+	 */
 	public function run() {
 		$action_name = APP_ACTION.'Action';
 		$action_name = method_exists($this->controller, $action_name) ? $action_name : 'notFoundAction';

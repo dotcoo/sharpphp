@@ -64,6 +64,11 @@ class Model {
 		}
 	}
 	
+	/**
+	 * 获取Model配置
+	 * @param string $name 配置名称
+	 * @return string|array
+	 */
 	public function getConfig($name=null) {
 		if (isset($name)) {
 			return isset($this->config[$name]) ? $this->config[$name] : '';
@@ -72,6 +77,11 @@ class Model {
 		}
 	}
 	
+	/**
+	 * 设置Model配置
+	 * @param string $name 配置名称
+	 * @param string $value 配置值
+	 */
 	public function setConfig($name, $value=null) {
 		if (isset($value)) {
 			$this->config[$name] = $value;
@@ -83,10 +93,18 @@ class Model {
 		}
 	}
 	
+	/**
+	 * 获取PDO对象
+	 * @return PDO
+	 */
 	public function getPDO() {
 		return $this->pdo;
 	}
 	
+	/**
+	 * 设置PDO
+	 * @param PDO $pdo
+	 */
 	public function setPDO($pdo) {
 		$this->pdo = $pdo;
 	}

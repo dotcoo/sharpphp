@@ -21,6 +21,9 @@ function rowsGetField(&$rows, $key) {
  * @return array
  */
 function rowsGetAssoc(&$rows, $key, $val=null) {
+	if (function_exists('array_column')) {
+		return array_column(&$rows, $key, $val);
+	}
 	$arr = array();
 	if (isset($val)) {
 		foreach($rows as $row) {
