@@ -26,19 +26,20 @@ class Model {
 	 * @param string $prefix
 	 * @param PDO $pdo
 	 */
-	function __construct($table_name, $pk=null, $prefix=null, $pdo=null) {
-		$this->table_name = $table_name;
-		$this->pk = $pk;
-		$this->prefix = $prefix;
-		$this->pdo = $pdo;
+	function __construct($table_name=null, $pk=null, $prefix=null, $pdo=null) {
+		$this->table_name = isset($table_name) ? $table_name : $this->table_name;
+		$this->pk = isset($pk) ? $pk : $this->pk;
+		$this->prefix = isset($prefix) ? $prefix : $this->prefix;
+		$this->pdo = isset($pdo) ? $pdo : $this->pdo;
 		
-		$this->initConfig();
+		$this->init();
 	}
 	
 	/**
-	 * 初始化配置
+	 * 初始化
 	 */
-	public function initConfig($config_model=null) {
+	public function init($config_model=null) {
+		// 获取配置
 		if (isset($config_model)) {
     	} elseif (self::$sharpphp instanceof SharpPHP) {
     		$config_model = self::$sharpphp->getConfig('model');
@@ -46,6 +47,7 @@ class Model {
     		$config_model = array();
     	}
     	
+    	// 设置配置
 		$default_model = array(
 				'prefix' => 'sharp_',	// 表前缀
 				'pk' => 'id', 			// 表主键
@@ -59,8 +61,8 @@ class Model {
 		$this->full_table_name = $this->prefix . $this->table_name;
 		$this->pk = isset($this->pk) ? $this->pk : $config_model['pk'];
 		$this->pagesize = $config_model['pagesize'];
-		if (self::$sharpphp instanceof SharpPHP) {
-			$this->pdo = self::$sharpphp->getPDO();
+		if (!isset($this->pdo)) {
+			$this->pdo = $this->getPDO();
 		}
 	}
 	
@@ -98,6 +100,12 @@ class Model {
 	 * @return PDO
 	 */
 	public function getPDO() {
+		if (isset($this->pdo)) {
+			return $this->pdo;
+		}
+		if (self::$sharpphp instanceof SharpPHP) {
+			$this->pdo = self::$sharpphp->getPDO();
+		}
 		return $this->pdo;
 	}
 	

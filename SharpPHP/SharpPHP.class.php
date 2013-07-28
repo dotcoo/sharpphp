@@ -13,11 +13,19 @@ class SharpPHP {
 	private $controller;
 	private $view;
 	private $pdo;
+	
+	public $controller_name;
+	public $action_name;
 
 	/**
 	 * 构造函数
+	 * @param string $controller_name 请求的控制器
+	 * @param string $action_name 请求的方法
 	 */
-	function __construct() {}
+	function __construct($controller_name = null, $action_name = null) {
+		$this->controller_name = $controller_name;
+		$this->action_name = $action_name;
+	}
 	
 	/**
 	 * 获取配置信息
@@ -155,8 +163,16 @@ class SharpPHP {
 		define('APP_MODULE', $config_app['module']);
 		
 		// 获得请求的Controller和Action
-		define('APP_CONTROLLER', ucfirst(isset($_GET['c']) ? $_GET['c'] : 'Index'));
-		define('APP_ACTION', isset($_GET['a']) ? $_GET['a'] : 'index');
+		if (isset($this->controller_name)) {
+			define('APP_CONTROLLER', ucfirst($this->controller_name));
+		} else {
+			define('APP_CONTROLLER', isset($_GET['c']) ? ucfirst($_GET['c']) : 'Index');
+		}
+		if (isset($this->action_name)) {
+			define('APP_ACTION', $this->action_name);
+		} else {
+			define('APP_ACTION', isset($_GET['a']) ? $_GET['a'] : 'index');
+		}
 	}
 	
 	/**
@@ -166,19 +182,35 @@ class SharpPHP {
 	 */
 	public function autoload($class_name) {
 		$core_class = array('Controller', 'Model', 'Page', 'View');
+		$class_path = '';
 		
-		if (in_array($class_name, $core_class)) {
-			// 核心类
-			include SHARPPHP_PATH.'/'.$class_name.'.class.php';
-		} elseif (substr($class_name, -5) == 'Model') {
-			// 模型
-			include APP_PATH.'/Model/'.$class_name.'.class.php';
-			return;
-		} elseif (substr($class_name, -10) == 'Controller') {
-			// 控制器
-			include APP_PATH.'/Controller/'.APP_MODULE.'/'.$class_name.'.class.php';
-			return;
-		} else {
+		if (in_array($class_name, $core_class)) { // 核心类
+			$class_path = SHARPPHP_PATH.'/'.$class_name.'.class.php';
+		} elseif (substr($class_name, -10) == 'Controller') { // 控制器
+			$class_path = APP_PATH.'/Controller/'.APP_MODULE.'/'.$class_name.'.class.php';
+		} elseif (substr($class_name, -5) == 'Model') { // 模型
+			$class_path = APP_PATH.'/Model/'.$class_name.'.class.php';
+		} else { // 外部类
+			$files = scandir(APP_PATH.'/Model/');
+			foreach ($files as $file) {
+				if ($file == '.' || $file == '..') {
+					continue;
+				}
+				if (!is_dir(APP_PATH.'/Model/'.$file)) {
+					continue;
+				}
+				$class_path = APP_PATH.'/Model/'.$file.'/'.$class_name.'.class.php';
+				if (file_exists($class_path)) {
+					break;
+				}
+			}
+		}
+		
+		if (!file_exists($class_path)) {
+			throw new Exception("SharpPHP: class $class_name file not found!");
+		}
+		include $class_path;
+		if (!class_exists($class_name)) {
 			throw new Exception("SharpPHP: class $class_name not found!");
 		}
 	}
