@@ -287,7 +287,7 @@ class Model {
 
 	/**
 	 * 获得自增id的指
-	 * @return number
+	 * @return int
 	 */
 	public function insertId() {
 		return $this->getPDO()->lastInsertId();
@@ -455,7 +455,7 @@ class Model {
 	/**
 	 * 获取结果集中的第一行
 	 * @param number $fetch_style
-	 * @return array
+	 * @return array|false
 	 */
 	public function fetchRow($fetch_style = PDO::FETCH_ASSOC) {
 		$this->limit(1);

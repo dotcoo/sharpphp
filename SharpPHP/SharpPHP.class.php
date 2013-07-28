@@ -275,4 +275,74 @@ class SharpPHP {
 		
 		$this->controller->{$action_name}($this->view);
 	}
+	
+	/**
+	 * 生成Model的工程类,产生代码提示
+	 * @param string $dirpath
+	 */
+	public function initModelFactory($dirpath=null) {
+		$dirpath = isset($dirpath) ? $dirpath : APP_PATH.'/Model';
+		$model_names = $this->getModelNames($dirpath);
+		$factory_func_code = '';
+		foreach ($model_names as $model_name) {
+			$factory_func_code .= $this->factoryCode($model_name) . "\n\n";
+		}
+	
+		$model_class_code = <<<CODE
+<?php
+if (!defined('SharpPHP')) { exit(); }
+
+class M {
+	private static \$objs = array();
+	
+$factory_func_code
+}
+CODE;
+		file_put_contents($dirpath.'/M.class.php', $model_class_code);
+	
+		echo "Create Model Factory OK!";
+	}
+	
+	/**
+	 * 读取所有Model的类名
+	 * @param unknown $dirpath
+	 * @return Ambigous <multitype:, multitype:string >
+	 */
+	private function getModelNames($dirpath) {
+		$model_names = array();
+		$ext = '.class.php';
+		$files = scandir($dirpath);
+		foreach ($files as $file) {
+			if ($file == '.' || $file == '..') {
+				continue;
+			}
+			$sub_dirname = $dirpath.'/'.$file;
+			if (is_dir($sub_dirname)) {
+				$model_names = array_merge($model_names, $this->getModelNames($sub_dirname));
+			} elseif (substr($file, -10) === $ext) {
+				$model_names[] = substr($file, 0, -10);
+			}
+		}
+		return $model_names;
+	}
+	
+	/**
+	 * Model工程方法实现
+	 * @param string $model_name
+	 * @return string
+	 */
+	private function factoryCode($model_name) {
+		return <<<CODE
+	/**
+	 * @return $model_name
+	 */
+	public static function get$model_name() {
+		if (isset(self::\$objs['$model_name'])) {
+			return self::\$objs['$model_name'];
+		}
+		\$model = self::\$objs['$model_name'] = new $model_name();
+		return \$model;
+	}
+CODE;
+	}
 }

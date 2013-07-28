@@ -1,5 +1,21 @@
 <?php
 /**
+ * 获取表单数据
+ * @param string $names
+ * @return array
+ */
+function getForm($names, &$form=null) {
+	$form = isset($form) ? $form : $_REQUEST;
+	$names = explode(',', $names);
+	// $names = array_map('trim', $names);
+	$data = array();
+	foreach ($names as $name) {
+		$data[$name] = $form[$name];
+	}
+	return $data;
+}
+
+/**
  * 获取二维数组的指定列，返回一个一维数组
  * @param array $rows
  * @param array $key

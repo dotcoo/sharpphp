@@ -164,16 +164,16 @@ class View {
 	 * @return string
 	 */
 	private function parse($html){
-		$html = preg_replace_callback('/{include ([^}]+)}/', array($this, 'includes'), $html);
-		$html = preg_replace('/{if ([^}]+)}/', '<?php if (\1) { ?>', $html);
-		$html = preg_replace('/{elseif ([^}]+)}/', '<?php } elseif (\1) { ?>', $html);
-		$html = preg_replace('/{else}/', '<?php } else { ?>', $html);
-		$html = preg_replace('/{\/[^}]+}/', '<?php } ?>', $html);
-		$html = preg_replace('/{loop (\S+) (\S+) (\S+)}/', '<?php foreach (\1 as \2 => \3) { ?>', $html);
+		$html = preg_replace_callback('/<!-- {include ([^}]+)} -->/', array($this, 'includes'), $html);
+		$html = preg_replace('/<!-- {if ([^}]+)} -->/', '<?php if (\1) { ?>', $html);
+		$html = preg_replace('/<!-- {elseif ([^}]+)} -->/', '<?php } elseif (\1) { ?>', $html);
+		$html = preg_replace('/<!-- {else} -->/', '<?php } else { ?>', $html);
+		$html = preg_replace('/<!-- {\/[^}]+} -->/', '<?php } ?>', $html);
+		$html = preg_replace('/<!-- {loop (\S+) (\S+) (\S+)} -->/', '<?php foreach (\1 as \2 => \3) { ?>', $html);
 		
+		$html = preg_replace_callback('/{=([^}]+)}/', array($this, 'pipe'), $html);
 		$html = preg_replace('/{(\$[^}]+)}/', '<?php echo \1; ?>', $html);
-		$html = preg_replace('/{=([^}]+)}/', '<?php echo \1; ?>', $html);
-		$html = preg_replace('/{_([^}]+)}/', '<?php \1; ?>', $html);
+		$html = preg_replace('/{:([^}]+)}/', '<?php \1; ?>', $html);
 		//$html = preg_replace('/{(\w+) ([^}]+)}/', '<?php echo $v->tag_\1(\2); ? >', $html); //自动标签
 		
 		return $html;
@@ -192,6 +192,43 @@ class View {
 			throw new Exception("View: $tplfile not found!");
 		}
 		return $this->parse(file_get_contents($tplfile));
+	}
+	
+	/**
+	 * 管道处理
+	 * @param array $m
+	 * @return string
+	 */
+	private function pipe ($m) {
+		$pipe_tpl = $m[1];
+		if (strpos($pipe_tpl, '|') === false) {
+			return "<?php echo $pipe_tpl; ?>";
+		}
+	
+		$pipes = explode('|', $pipe_tpl);
+		$length = count($pipes);
+		$code = $pipes[0];
+	
+		for ($i=1; $i<$length; $i++) {
+			$pipe = $pipes[$i];
+			if (strpos($pipe, '(') === false) {
+				$code = $pipe.'('.$code.')';
+			} else {
+				list($func, $params) = explode('(', $pipe, 2);
+				$params{strrpos($params, ')')} = ' ';
+				$params = explode(',', $params);
+				$params_new = array();
+				foreach ($params as $param) {
+					if ($param === '') {
+						$params_new[] = $code;
+					} else {
+						$params_new[] = $param;
+					}
+				}
+				$code = $func.'('.implode(',', $params_new).')';
+			}
+		}
+		return "<?php echo $code; ?>";
 	}
 	
 	/**
