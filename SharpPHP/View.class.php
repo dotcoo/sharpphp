@@ -219,13 +219,14 @@ class View {
 				$params = explode(',', $params);
 				$params_new = array();
 				foreach ($params as $param) {
+					$param = trim($param);
 					if ($param === '') {
 						$params_new[] = $code;
 					} else {
 						$params_new[] = $param;
 					}
 				}
-				$code = $func.'('.implode(',', $params_new).')';
+				$code = $func.'('.implode(', ', $params_new).')';
 			}
 		}
 		return "<?php echo $code; ?>";

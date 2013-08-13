@@ -191,17 +191,20 @@ class SharpPHP {
 		} elseif (substr($class_name, -5) == 'Model') { // 模型
 			$class_path = APP_PATH.'/Model/'.$class_name.'.class.php';
 		} else { // 外部类
-			$files = scandir(APP_PATH.'/Model/');
-			foreach ($files as $file) {
-				if ($file == '.' || $file == '..') {
-					continue;
-				}
-				if (!is_dir(APP_PATH.'/Model/'.$file)) {
-					continue;
-				}
-				$class_path = APP_PATH.'/Model/'.$file.'/'.$class_name.'.class.php';
-				if (file_exists($class_path)) {
-					break;
+			$class_path = APP_PATH.'/Model/'.$class_name.'.class.php';
+			if (!file_exists($class_path)) {
+				$files = scandir(APP_PATH.'/Model/');
+				foreach ($files as $file) {
+					if ($file == '.' || $file == '..') {
+						continue;
+					}
+					if (!is_dir(APP_PATH.'/Model/'.$file)) {
+						continue;
+					}
+					$class_path = APP_PATH.'/Model/'.$file.'/'.$class_name.'.class.php';
+					if (file_exists($class_path)) {
+						break;
+					}
 				}
 			}
 		}

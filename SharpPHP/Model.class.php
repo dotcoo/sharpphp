@@ -518,7 +518,7 @@ class Model {
 	 */
 	public function find($id) {
 		$where = array("`{$this->pk}` = ?" => $id);
-		return $this->select($where)->fetch_row();
+		return $this->select($where)->fetchRow();
 	}
 	
 	/**
@@ -527,12 +527,12 @@ class Model {
 	 * @return Model
 	 */
 	public function save($data) {
-		if (empty($data[$this->pk])) {
-			return $this->insert($data);
-		} else {
+		if (isset($data[$this->pk])) {
 			$where = array("`{$this->pk}` = ?" => $data[$this->pk]);
 			unset($data[$this->pk]);
 			return $this->update($where, $data);
+		} else {
+			return $this->insert($data);
 		}
 	}
 	

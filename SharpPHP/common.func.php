@@ -87,7 +87,6 @@ function rowsToFloor(&$rows, &$tree, &$floor=0, $pid=0, $key="id", $pkey="pid") 
 	$trees = array();
 	foreach ($rows as &$row) {
 		if($pid == $row[$pkey]) {
-			// 			echo $row['pid'], '|', $row['id'], "\n";
 			$row2 = $row;
 			$row2['floor'] = 0 + $floor;
 			$tree[] = $row2;
@@ -102,8 +101,7 @@ function rowsToFloor(&$rows, &$tree, &$floor=0, $pid=0, $key="id", $pkey="pid") 
  * @return number
  */
 function ip(){
-	$ipstr = isset($_SERVER['HTTP_X_FORWARDED_FOR'])?$_SERVER['HTTP_X_FORWARDED_FOR']:$_SERVER['REMOTE_ADDR'];
-	return ip2long($ipstr);
+	return ip2long($_SERVER['REMOTE_ADDR']);
 }
 
 /**
@@ -111,19 +109,26 @@ function ip(){
  * @param string $name file标签的name属性
  * @param number $i 多文件上传时的索引
  */
-function is_upload($name, $i=-1){
-	if(substr($_SERVER['CONTENT_TYPE'], 0, 19) !== 'multipart/form-data'){
-		throw new Exception("Upload: upload file not found!<br />enctype=\"multipart/form-data\"");
+function is_upload($name, $index=null){
+	if (!(isset($_SERVER['HTTP_CONTENT_TYPE']) && strpos($_SERVER['HTTP_CONTENT_TYPE'], 'multipart/form-data')===0)) {
+		return array(false, 'Upload: form error!<br />enctype="multipart/form-data"');
 	}
-	if(empty($_FILES[$name])){
-		return false;
+	if (empty($_FILES[$name])) {
+		return array(false, "Upload: form $name not exist!");
 	}
-	$file_error = $i<0 ? $_FILES[$name]['error'] : $_FILES[$name]['error'][$i];
-	$isupload = $file_error == 0;
-	if($file_error != 0 && $file_error != 4){
-		throw new Exception("upload error! code: $file_error");
+	if ($index===null) {
+		if ($_FILES[$name]['error'] !== 0) {
+			return array(false, "Upload: upload error, code {$_FILES[$name]['error']}");
+		}
+	} else {
+		if (!isset($_FILES[$name][$index])) {
+			return array(false, "Upload: form $name index not exist");
+		}
+		if ($_FILES[$name]['error'][$index] !== 0) {
+			return array(false, "Upload: upload error, code {$_FILES[$name]['error']}");
+		}
 	}
-	return $isupload;
+	return array(true, 'Upload: OK!');
 }
 
 /**
@@ -147,4 +152,12 @@ function random($len) {
 		$str .= $char{mt_rand(0, 63)};
 	}
 	return $str;
+}
+
+/**
+ * 计算当前天数
+ * @return number
+ */
+function today() {
+	return (int) (($_SERVER['REQUEST_TIME'] + 28800) / 86400);
 }
